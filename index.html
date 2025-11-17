@@ -96,62 +96,51 @@
 </div>
 
 <script>
-const apiUrl = "https://api.ampconsultancy.in/process";  // ✅ Fixed API URL
+  // ---------- UPDATE ONLY THESE TWO LINES ----------
+  const apiUrl = "https://api.ampconsultancy.in/process";   // production API URL
+  const apiKeyPlaceholder = "APIMANUALLYBYAJAY";           // you will replace this with real key later
+  // --------------------------------------------------
 
-document.getElementById("form").addEventListener("submit", async (e) => {
-    e.preventDefault();
+  document.getElementById('form').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const files = document.querySelector('input[type="file"]').files;
+    if (!files || files.length === 0) return alert('Pick a PDF');
 
-    const files = document.getElementById("files").files;
-    const zip = document.getElementById("zip_results").value;
-
-    if (!files.length) {
-        alert("Please select at least one PDF file.");
-        return;
-    }
-
-    let fd = new FormData();
-    for (let f of files) fd.append("files", f);
-    fd.append("zip_results", zip);
-
-    document.getElementById("status").innerText = "Uploading...";
-    document.getElementById("result").style.display = "none";
+    const fd = new FormData();
+    for (const f of files) fd.append('files', f);
+    const zipVal = document.getElementById('zip_results')?.value || 'false';
+    fd.append('zip_results', zipVal);
 
     try {
-        const r = await fetch(apiUrl, {
-            method: "POST",
-            headers: {
-                "x-api-key": "ampajaypanchotiya+917984307187@@",   // 🔑 Replace manually after upload
-                "Accept": "application/json"
-            },
-            body: fd,
-            mode: "cors"
-        });
+      const r = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          // If your API requires a key, set it here. Replace placeholder with real key.
+          'x-api-key': apiKeyPlaceholder
+        },
+        body: fd,
+        mode: 'cors'
+      });
 
-        if (!r.ok) {
-            document.getElementById("status").innerText = "API Error (" + r.status + ")";
-            const err = await r.text();
-            document.getElementById("result").innerText = err;
-            document.getElementById("result").style.display = "block";
-            return;
-        }
+      if (!r.ok) {
+        const txt = await r.text();
+        throw new Error(`Server returned ${r.status}: ${txt}`);
+      }
 
-        // File response (CSV)
-        const blob = await r.blob();
-        const link = document.createElement("a");
-        link.href = window.URL.createObjectURL(blob);
-        link.download = "report.csv";
-        link.click();
-
-        document.getElementById("status").innerHTML =
-            "<span class='success'>Success — File downloaded.</span>";
-
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'report.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+      document.querySelector('.out').textContent = "Done — downloaded report.csv";
     } catch (err) {
-        document.getElementById("status").innerText = "Network / CORS Error";
-        document.getElementById("result").innerText = err.toString();
-        document.getElementById("result").style.display = "block";
+      document.querySelector('.out').textContent = `Network / CORS Error\n\n${err.message}`;
     }
-});
+  });
 </script>
+
 
 </body>
 </html>
