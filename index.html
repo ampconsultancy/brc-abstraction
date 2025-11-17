@@ -96,50 +96,96 @@
 </div>
 
 <script>
-  // ---------- UPDATE ONLY THESE TWO LINES ----------
-  const apiUrl = "https://api.ampconsultancy.in/process";   // production API URL
-  const apiKeyPlaceholder = "APIMANUALLYBYAJAY";           // you will replace this with real key later
-  // --------------------------------------------------
+/* ---- DEBUG API uploader script (replace the existing <script> block) ----
+   Edit only the apiUrl and apiKey values below if you want.
+*/
+const apiUrl = "https://api.ampconsultancy.in/process"; // production API
+let apiKey = "APIMANUALLYBYAJAY";                        // placeholder - change later
 
-  document.getElementById('form').addEventListener('submit', async (ev) => {
+function setStatus(text, isError=false){
+  const out = document.querySelector('.out') || (function(){
+    const el = document.createElement('div'); el.className='out'; el.style.marginTop='12px';
+    document.querySelector('.card')?.appendChild(el);
+    return el;
+  })();
+  out.style.background = isError ? '#ffecec' : '#f6f8fa';
+  out.style.padding = '10px';
+  out.style.borderRadius = '6px';
+  out.textContent = text;
+  console.log('[UI] '+text);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  setStatus('Ready');
+
+  const form = document.getElementById('form');
+  if(!form){
+    setStatus('ERROR: Missing form element with id="form"', true);
+    return;
+  }
+
+  form.addEventListener('submit', async (ev) => {
     ev.preventDefault();
+    setStatus('Preparing files to upload...');
+    console.log('Files input element:', document.querySelector('input[type="file"]'));
     const files = document.querySelector('input[type="file"]').files;
-    if (!files || files.length === 0) return alert('Pick a PDF');
+    if(!files || files.length === 0){
+      setStatus('No file chosen. Please select a PDF first.', true);
+      return;
+    }
 
     const fd = new FormData();
-    for (const f of files) fd.append('files', f);
+    for (let i=0;i<files.length;i++){ fd.append('files', files[i]); }
     const zipVal = document.getElementById('zip_results')?.value || 'false';
     fd.append('zip_results', zipVal);
 
-    try {
-      const r = await fetch(apiUrl, {
+    setStatus(`Uploading ${files.length} file(s) to API...`);
+    try{
+      console.log('About to fetch:', apiUrl);
+      const resp = await fetch(apiUrl, {
         method: 'POST',
+        mode: 'cors',
         headers: {
-          // If your API requires a key, set it here. Replace placeholder with real key.
-          'x-api-key': apiKeyPlaceholder
+          'x-api-key': apiKey
         },
-        body: fd,
-        mode: 'cors'
+        body: fd
       });
 
-      if (!r.ok) {
-        const txt = await r.text();
-        throw new Error(`Server returned ${r.status}: ${txt}`);
+      console.log('Fetch returned:', resp);
+      if(!resp){
+        setStatus('No response object from fetch (network fail).', true);
+        return;
       }
 
-      const blob = await r.blob();
+      setStatus(`HTTP ${resp.status} ${resp.statusText} — reading response...`);
+      // if response is a file:
+      const contentType = resp.headers.get('content-type') || '';
+      console.log('Content-Type:', contentType);
+
+      if (!resp.ok) {
+        const txt = await resp.text().catch(()=>'<no body>');
+        setStatus(`Server returned ${resp.status}: ${txt}`, true);
+        console.error('Server error body:', txt);
+        return;
+      }
+
+      // Download a blob if server returned file
+      const blob = await resp.blob();
+      const filenameHeader = resp.headers.get('content-disposition') || '';
+      const suggestedName = filenameHeader.match(/filename="?([^"]+)"?/)?.[1] || 'report.bin';
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
-      a.download = 'report.csv';
-      a.click();
-      URL.revokeObjectURL(url);
-      document.querySelector('.out').textContent = "Done — downloaded report.csv";
-    } catch (err) {
-      document.querySelector('.out').textContent = `Network / CORS Error\n\n${err.message}`;
+      a.href = url; a.download = suggestedName; document.body.appendChild(a); a.click();
+      URL.revokeObjectURL(url); a.remove();
+      setStatus(`Success — downloaded ${suggestedName}`);
+    } catch (err){
+      console.error('Fetch exception:', err);
+      setStatus('Network/CORS or fetch exception: ' + (err && err.message ? err.message : String(err)), true);
     }
   });
+});
 </script>
+
 
 
 </body>
