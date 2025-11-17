@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BRC Abstraction — AMP Consultancy</title>
+
+<style>
+    :root {
+        --bg:#f7fafc;--card:#ffffff;--accent:#2563eb;--muted:#6b7280;--success:#059669;
+    }
+    body{font-family:Inter,system-ui,Segoe UI,Roboto,'Helvetica Neue',Arial;padding:24px;background:var(--bg);color:#111}
+    .wrap{max-width:620px;margin:auto;}
+    header{text-align:center;margin-bottom:20px}
+    h1{font-size:24px;margin-top:6px}
+    .card{background:var(--card);border-radius:10px;padding:20px;box-shadow:0 6px 18px rgba(0,0,0,0.05)}
+    .row{margin-top:18px}
+    button{background:var(--accent);color:#fff;padding:10px 16px;border:none;border-radius:6px;cursor:pointer}
+    button:hover{opacity:.9}
+    select{padding:8px;border-radius:6px;border:1px solid #ddd}
+    .result{margin-top:20px;background:#eef7ff;padding:12px;border-radius:6px;font-size:14px;white-space:pre-wrap}
+    .error{color:red;font-weight:bold}
+</style>
+</head>
+
+<body>
+<div class="wrap">
+    <header>
+        <h1>BRC Abstraction — Upload & Process PDF</h1>
+        <div style="font-size:14px;color:#666;">
+            Use this page to upload BRC PDF(s). Results come from the live API (api.ampconsultancy.in)
+        </div>
+    </header>
+
+    <div class="card">
+        <form id="form" enctype="multipart/form-data" autocomplete="off">
+            <label>Select PDF file(s)</label><br>
+            <input id="files" name="files" type="file" accept="application/pdf" multiple />
+
+            <div class="row">
+                <button type="submit">Send to API</button>
+                <select id="zip_results">
+                    <option value="false">zip_results: false</option>
+                    <option value="true">zip_results: true</option>
+                </select>
+            </div>
+        </form>
+
+        <div id="status" class="result">Ready</div>
+    </div>
+</div>
+
+<script>
+// ------------------------------------------------------
+// API SETTINGS (YOU CAN CHANGE THESE)
+// ------------------------------------------------------
+const apiUrl = "https://api.ampconsultancy.in/process";
+const apiKey = "ampajaypanchotiya+917984307187@@";     // <-- Replace later with your real API key
+// ------------------------------------------------------
+
+document.getElementById("form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const statusBox = document.getElementById("status");
+    statusBox.innerHTML = "Uploading...";
+    statusBox.classList.remove("error");
+
+    const files = document.getElementById("files").files;
+    const zip_results = document.getElementById("zip_results").value;
+
+    if (!files.length) {
+        statusBox.innerHTML = "Please select at least one PDF.";
+        return;
+    }
+
+    // Build form data
+    let fd = new FormData();
+    for (let f of files) fd.append("files", f);
+    fd.append("zip_results", zip_results);
+
+    try {
+        const response = await fetch(apiUrl, {
+            method: "POST",
+            headers: {
+                "x-api-key": apiKey   // Required for authentication
+            },
+            body: fd,
+            mode: "cors"
+        });
+
+        if (!response.ok) {
+            const text = await response.text();
+            statusBox.innerHTML = "Error: " + text;
+            statusBox.classList.add("error");
+            return;
+        }
+
+        // Process output (CSV or ZIP)
+        const blob = await response.blob();
+
+        // Auto-download
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+
+        const contentType = response.headers.get("Content-Type") || "";
+        if (contentType.includes("zip")) {
+            link.download = "results.zip";
+        } else {
+            link.download = "report.csv";
+        }
+
+        link.click();
+        statusBox.innerHTML = "Success — file downloaded.";
+
+    } catch (err) {
+        statusBox.innerHTML = "Network Error: " + err.message;
+        statusBox.classList.add("error");
+    }
+});
+</script>
+
+</body>
+</html>
