@@ -1,145 +1,157 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>BRC Abstraction — AMP Consultancy</title>
-  <style>
-    :root{--bg:#f7fafc;--card:#ffffff;--accent:#2563eb;--muted:#6b7280;--success:#059669}
-    body{font-family:Inter,system-ui,Segoe UI,Roboto,'Helvetica Neue',Arial;padding:24px;background:var(--bg);color:#111}
-    .wrap{max-width:920px;margin:18px auto}
-    header{display:flex;align-items:center;gap:16px;margin-bottom:18px}
-    header h1{font-size:20px;margin:0}
-    .card{background:var(--card);border-radius:10px;padding:20px;box-shadow:0 6px 18px rgba(15,23,42,0.06)}
-    .hint{color:var(--muted);font-size:13px;margin-top:6px}
-    label{display:block;font-weight:600;margin-bottom:8px}
-    input[type="file"]{display:block}
-    .row{display:flex;gap:12px;align-items:center;margin-top:12px}
-    .btn{background:var(--accent);color:#fff;border:none;padding:10px 14px;border-radius:8px;cursor:pointer}
-    .btn:disabled{opacity:.6;cursor:default}
-    .out{margin-top:18px;white-space:pre-wrap;background:#0f172a;color:#fff;padding:12px;border-radius:8px;font-family:monospace;font-size:13px}
-    .success{color:var(--success);font-weight:700}
-    .small{font-size:13px;color:var(--muted);margin-top:8px}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BRC Abstraction — AMP Consultancy</title>
+
+    <style>
+        :root {
+            --bg: #f7fafc;
+            --card: #ffffff;
+            --accent: #2563eb;
+            --muted: #6b7280;
+            --success: #059669;
+        }
+        body {
+            font-family: Inter, system-ui, Segoe UI, Roboto, Helvetica Neue, Arial;
+            padding: 24px;
+            background: var(--bg);
+            color: #111;
+        }
+        .wrap { max-width: 680px; margin: 0 auto; }
+
+        header { text-align: center; margin-bottom: 18px; }
+        h1 { font-size: 24px; font-weight: 600; margin-bottom: 8px; }
+        .hint { color: var(--muted); font-size: 14px; margin-top: 6px; }
+
+        .card {
+            background: var(--card);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+            margin-bottom: 18px;
+        }
+
+        .btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 10px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .btn:hover { background: #1f4fc4; }
+
+        select, input[type="file"] {
+            padding: 8px;
+            margin-top: 10px;
+        }
+
+        .result {
+            white-space: pre;
+            background: #f0f1f2;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .success {
+            color: var(--success);
+            font-weight: bold;
+        }
+    </style>
 </head>
+
 <body>
-  <div class="wrap">
+
+<div class="wrap">
     <header>
-      <img src="https://ampconsultancy.in/favicon.ico" alt="" style="width:44px;height:44px;border-radius:6px;object-fit:contain">
-      <div>
         <h1>BRC Abstraction — Upload & Process PDF</h1>
-        <div class="hint">Use this page to upload BRC PDF(s). Results come from the live API (api.ampconsultancy.in).</div>
-      </div>
+        <div class="hint">
+            Use this page to upload BRC PDF(s). Results come from the live API (api.ampconsultancy.in).
+        </div>
     </header>
 
     <section class="card">
-      <form id="form" enctype="multipart/form-data" autocomplete="off">
-        <label for="files">Select PDF file(s)</label>
-        <input id="files" name="files" type="file" accept="application/pdf" multiple />
+        <form id="form" enctype="multipart/form-data" autocomplete="off">
+            <label>Select PDF file(s)</label><br>
+            <input id="files" name="files" type="file" accept="application/pdf" multiple />
 
-        <div class="row">
-          <button id="submitBtn" type="submit" class="btn">Send to API</button>
-          <select id="zip_results" title="zip results" style="padding:8px;border-radius:6px;border:1px solid #e5e7eb">
-            <option value="false" selected>zip_results: false</option>
-            <option value="true">zip_results: true</option>
-          </select>
-          <div style="margin-left:auto" class="small">Endpoint: <strong>https://api.ampconsultancy.in/process</strong></div>
-        </div>
+            <div class="row" style="margin-top: 18px;">
+                <button id="submitBtn" type="submit" class="btn">Send to API</button>
 
-        <div id="status" class="small">Ready</div>
-      </form>
+                <select id="zip_results" style="margin-left:12px;">
+                    <option value="false" selected>zip_results: false</option>
+                    <option value="true">zip_results: true</option>
+                </select>
+            </div>
+        </form>
 
-      <div id="result" class="out" style="display:none"></div>
-      <a id="downloadLink" style="display:none;margin-top:8px" class="small" href="#" download>Download file</a>
+        <div id="status" class="hint" style="margin-top:12px;">Ready</div>
+
+        <div id="result" class="result"></div>
     </section>
-  </div>
+</div>
 
 <script>
-const apiUrl = 'https://api.ampconsultancy.in/process'; // live API
-const form = document.getElementById('form');
-const filesInput = document.getElementById('files');
-const submitBtn = document.getElementById('submitBtn');
-const status = document.getElementById('status');
-const result = document.getElementById('result');
-const downloadLink = document.getElementById('downloadLink');
-const zipSelect = document.getElementById('zip_results');
+const apiUrl = "https://api.ampconsultancy.in/process";  // ✅ Fixed API URL
 
-function setStatus(text, isError=false){
-  status.textContent = text;
-  status.style.color = isError ? 'crimson' : '';
-}
+document.getElementById("form").addEventListener("submit", async (e) => {
+    e.preventDefault();
 
-form.addEventListener('submit', async (ev) => {
-  ev.preventDefault();
-  result.style.display = 'none';
-  downloadLink.style.display = 'none';
+    const files = document.getElementById("files").files;
+    const zip = document.getElementById("zip_results").value;
 
-  const files = filesInput.files;
-  if(!files || files.length === 0){
-    setStatus('Please choose at least one PDF file.', true);
-    return;
-  }
-
-  submitBtn.disabled = true;
-  setStatus('Uploading…');
-
-  const fd = new FormData();
-  // API expects files as array; add each file with same name `files`
-  for(let i=0;i<files.length;i++){
-    fd.append('files', files[i], files[i].name);
-  }
-  // add zip option as specified by API
-  fd.append('zip_results', zipSelect.value === 'true' ? 'true' : 'false');
-
-  try {
-    const r = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        // If your API requires an API key set it here, else remove the header line below.
-        // 'x-api-key': 'paste-your-key-here'
-      },
-      body: fd,
-      mode: 'cors'
-    });
-
-    // If API returns file (CSV/zip) as attachment, handle blob:
-    const contentDisposition = r.headers.get('content-disposition') || '';
-    const ct = r.headers.get('content-type') || '';
-
-    if(!r.ok){
-      const json = await r.json().catch(()=>({error:'non-json response'}));
-      setStatus('API error: ' + (json.detail ? JSON.stringify(json.detail) : (json.error||r.statusText)), true);
-      submitBtn.disabled = false;
-      return;
+    if (!files.length) {
+        alert("Please select at least one PDF file.");
+        return;
     }
 
-    // If response is an attachment:
-    if(contentDisposition.includes('attachment') || ct.includes('application/zip') || ct.includes('text/csv')){
-      const blob = await r.blob();
-      const url = URL.createObjectURL(blob);
-      downloadLink.href = url;
-      // try to extract filename from header:
-      const match = contentDisposition.match(/filename="?(.+?)"?(;|$)/i);
-      const filename = match ? match[1] : 'result.bin';
-      downloadLink.download = filename;
-      downloadLink.textContent = 'Download ' + filename;
-      downloadLink.style.display = 'inline-block';
-      setStatus('File ready — click to download', false);
-      result.style.display = 'none';
-    } else {
-      // assume JSON
-      const json = await r.json().catch(()=>null);
-      result.style.display = 'block';
-      result.textContent = JSON.stringify(json, null, 2);
-      setStatus('Success', false);
-    }
+    let fd = new FormData();
+    for (let f of files) fd.append("files", f);
+    fd.append("zip_results", zip);
 
-  } catch (err){
-    setStatus('Network or JS error: ' + err.message, true);
-  } finally {
-    submitBtn.disabled = false;
-  }
+    document.getElementById("status").innerText = "Uploading...";
+    document.getElementById("result").style.display = "none";
+
+    try {
+        const r = await fetch(apiUrl, {
+            method: "POST",
+            headers: {
+                "x-api-key": "ampajaypanchotiya+917984307187@@",   // 🔑 Replace manually after upload
+                "Accept": "application/json"
+            },
+            body: fd,
+            mode: "cors"
+        });
+
+        if (!r.ok) {
+            document.getElementById("status").innerText = "API Error (" + r.status + ")";
+            const err = await r.text();
+            document.getElementById("result").innerText = err;
+            document.getElementById("result").style.display = "block";
+            return;
+        }
+
+        // File response (CSV)
+        const blob = await r.blob();
+        const link = document.createElement("a");
+        link.href = window.URL.createObjectURL(blob);
+        link.download = "report.csv";
+        link.click();
+
+        document.getElementById("status").innerHTML =
+            "<span class='success'>Success — File downloaded.</span>";
+
+    } catch (err) {
+        document.getElementById("status").innerText = "Network / CORS Error";
+        document.getElementById("result").innerText = err.toString();
+        document.getElementById("result").style.display = "block";
+    }
 });
 </script>
+
 </body>
 </html>
